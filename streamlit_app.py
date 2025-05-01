@@ -111,7 +111,7 @@ with tab1:
         
         if 'current_image_url' in st.session_state and st.session_state.current_image_url is not None:
             try:
-                st.image(st.session_state.current_image_url, caption="Generated Image", use_column_width=True)
+                st.image(st.session_state.current_image_url, caption="Generated Image", use_container_width=True)
                 
                 # Publish options
                 st.write("### Publish Options")
