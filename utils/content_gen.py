@@ -1,4 +1,5 @@
 from config import OPENAI_API_KEY, DEFAULT_TONE, TARGET_AUDIENCE, INSTAGRAM_USERNAME
+import random
 import openai
 
 # Configure OpenAI for the older version that's likely installed
@@ -65,36 +66,74 @@ def generate_caption(topic, content_type="educational", hashtags=5):
         print(f"Error generating caption: {e}")
         return f"This is a post about {topic}. #hypothyroid #health"
 
+
+
+
+
+
+
+
 def generate_image_prompt(topic):
-    """Generate an image prompt for DALL-E based on the topic"""
-    prompt = f"""
-    Create a detailed image prompt for DALL-E to generate an Instagram-worthy image about:
-    "{topic}"
-    
-    The image should:
-    - Match the aesthetic of @{INSTAGRAM_USERNAME}'s Instagram (clean, minimalist, professional)
-    - Use light backgrounds with blue accents
-    - Be appropriate for a medical professional's account
-    - Be visually appealing and shareable
-    - NOT contain any text overlay (DALL-E struggles with text)
-    - Be suitable for {TARGET_AUDIENCE}
-    
-    Format your response as a detailed description only, no explanations.
-    """
-    
-    try:
-        # Using the older style openai API call (0.28.x) with a current model
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a professional image prompt engineer."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=100,
-            temperature=0.7
-        )
-        
-        return response.choices[0].message['content'].strip()
-    except Exception as e:
-        print(f"Error generating image prompt: {e}")
-        return "A clean, minimal medical image with light background and blue accents, suitable for Instagram."
+    """Generate a clean, medically themed image prompt with no text, labels, organs, or faces. Visual style is randomized."""
+
+    visual_styles = [
+        "flat lay on a white background",
+        "isometric hospital desk view",
+        "top-down sterile lighting view",
+        "side-angle with soft shadows",
+        "3D clinical render with blue accents",
+        "minimalist medical scene with clean design",
+        "medical tray setup in natural lighting"
+    ]
+
+    prompt_groups = {
+        "general_health": [
+            "Minimalist medical icon like a blue stethoscope or health cross on a pure white background",
+            "Sterile medical tools like gloves and a digital thermometer placed neatly on a white surface"
+        ],
+        "lab": [
+            "Unlabeled test tubes, pipettes, and gloves on a sterile white lab tray",
+            "Clean lab setup with unmarked vials and a blank surface"
+        ],
+        "thyroid": [
+            "A clean desk setup with a wellness smart band, herbal tea, and a digital thermometer placed neatly on a white surface",
+            "Thyroid-friendly foods like spinach, boiled eggs, and seaweed arranged on a sterile white plate",
+            "A digital wellness tracker placed next to an unmarked pill organizer and glass water bottle on a clinical white background",
+            "Flat lay of a medical table with a temperature sensor, smartwatch, and blank daily tracker pad (face down)"
+        ],
+        "hormone_balance": [
+            "A modern clinical desk with a closed hormone-monitoring app tablet, digital watch, and blue stress ball",
+            "A medical wristband, glass of water, and clean schedule tracker turned over on a white tray",
+            "Flat lay of hormone-friendly supplements (in generic containers) next to iodine-rich greens on a sterile plate",
+            "Medical workspace with a closed digital notepad and calming blue pulse oximeter"
+        ],
+        "mental_focus_medical": [
+            "Minimalist mental health workspace with noise-canceling headphones, blank notepad (face down), and a sealed tea sachet",
+            "A closed mindfulness tracker app device next to a plant and smart ring on a white hospital tray",
+            "Clinical focus tools like blue stress ball, timer, and a muted smartwatch placed symmetrically",
+            "Simple blue circle design on clean sterile background, paired with wellness accessories"
+        ]
+        # (add the remaining prompt groups here as previously structured...)
+    }
+
+    keyword_map = {
+        "general_health": ["health", "clinic", "medical"],
+        "lab": ["lab", "test", "blood", "sample", "diagnostic"],
+        "thyroid": ["thyroid", "hormone", "levothyroxine", "gland"],
+        "hormone_balance": ["balance", "hormonal", "estrogen", "testosterone"],
+        "mental_focus_medical": ["mental", "focus", "clarity", "neuro"]
+        # (add the rest of your keyword mappings here...)
+    }
+
+    topic_lower = topic.lower()
+
+    for key, keywords in keyword_map.items():
+        if any(word in topic_lower for word in keywords):
+            base_prompt = random.choice(prompt_groups[key])
+            style = random.choice(visual_styles)
+            return f"{base_prompt}, styled as a {style}, with no text or labels"
+
+    # Fallback
+    base_prompt = random.choice(prompt_groups["general_health"])
+    style = random.choice(visual_styles)
+    return f"{base_prompt}, styled as a {style}, with no text or labels"

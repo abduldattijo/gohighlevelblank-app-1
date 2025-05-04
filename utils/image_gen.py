@@ -35,3 +35,5 @@ def save_image_from_url(url, path):
     except Exception as e:
         print(f"Error saving image: {e}")
         return False
+    
+                                                                                                              
