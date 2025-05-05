@@ -1,23 +1,23 @@
+# content_gen.py (updated image prompt formatting for DALL·E)
+
 from config import OPENAI_API_KEY, DEFAULT_TONE, TARGET_AUDIENCE, INSTAGRAM_USERNAME
 import random
 import openai
 
-# Configure OpenAI for the older version that's likely installed
+# Configure OpenAI for older completions if needed
 openai.api_key = OPENAI_API_KEY
 
 def generate_topic(content_type="educational"):
-    """Generate a content topic for hypothyroid audience"""
     prompt = f"""
     Generate a compelling social media topic for {TARGET_AUDIENCE}.
     The content should be {content_type} in nature.
     The topic should be specific to hypothyroid issues, symptoms, or solutions.
     Format as a short, catchy title (max 10 words).
     """
-    
+
     try:
-        # Using the older style openai API call (0.28.x) with a current model
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are a medical content specialist focused on hypothyroid issues."},
                 {"role": "user", "content": prompt}
@@ -25,34 +25,31 @@ def generate_topic(content_type="educational"):
             max_tokens=50,
             temperature=0.7
         )
-        
         return response.choices[0].message['content'].strip().strip('"')
     except Exception as e:
         print(f"Error generating topic: {e}")
         return "Hypothyroid Management Tips"
 
 def generate_caption(topic, content_type="educational", hashtags=5):
-    """Generate a caption for an Instagram post"""
     prompt = f"""
     Write an engaging Instagram caption for a post titled "{topic}".
-    
+
     Target audience: {TARGET_AUDIENCE}
     Tone: {DEFAULT_TONE}, with a {content_type} focus
-    
+
     The caption should:
     - Be 3-4 short paragraphs
     - Include an engaging hook
     - Provide valuable information about hypothyroid issues
     - End with a clear call-to-action
     - Include {hashtags} relevant hashtags at the end
-    
+
     The Instagram account is @{INSTAGRAM_USERNAME}, a doctor who helps people with hypothyroid issues.
     """
-    
+
     try:
-        # Using the older style openai API call (0.28.x) with a current model
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are a social media content creator specializing in health topics."},
                 {"role": "user", "content": prompt}
@@ -60,21 +57,13 @@ def generate_caption(topic, content_type="educational", hashtags=5):
             max_tokens=500,
             temperature=0.7
         )
-        
         return response.choices[0].message['content'].strip()
     except Exception as e:
         print(f"Error generating caption: {e}")
         return f"This is a post about {topic}. #hypothyroid #health"
 
-
-
-
-
-
-
-
 def generate_image_prompt(topic):
-    """Generate a clean, medically themed image prompt with no text, labels, organs, or faces. Visual style is randomized."""
+    """Generate a clean, medically themed image prompt for DALL-E 3 with refined visual formatting."""
 
     visual_styles = [
         "flat lay on a white background",
@@ -113,7 +102,6 @@ def generate_image_prompt(topic):
             "Clinical focus tools like blue stress ball, timer, and a muted smartwatch placed symmetrically",
             "Simple blue circle design on clean sterile background, paired with wellness accessories"
         ]
-        # (add the remaining prompt groups here as previously structured...)
     }
 
     keyword_map = {
@@ -122,7 +110,6 @@ def generate_image_prompt(topic):
         "thyroid": ["thyroid", "hormone", "levothyroxine", "gland"],
         "hormone_balance": ["balance", "hormonal", "estrogen", "testosterone"],
         "mental_focus_medical": ["mental", "focus", "clarity", "neuro"]
-        # (add the rest of your keyword mappings here...)
     }
 
     topic_lower = topic.lower()
@@ -131,9 +118,8 @@ def generate_image_prompt(topic):
         if any(word in topic_lower for word in keywords):
             base_prompt = random.choice(prompt_groups[key])
             style = random.choice(visual_styles)
-            return f"{base_prompt}, styled as a {style}, with no text or labels"
+            return f"Highly detailed top-down photo: {base_prompt}, placed on a white medical tray, styled as {style}, no text, no labels, no human body parts."
 
-    # Fallback
     base_prompt = random.choice(prompt_groups["general_health"])
     style = random.choice(visual_styles)
-    return f"{base_prompt}, styled as a {style}, with no text or labels"
+    return f"Highly detailed top-down photo: {base_prompt}, placed on a white medical tray, styled as {style}, no text, no labels, no human body parts."
