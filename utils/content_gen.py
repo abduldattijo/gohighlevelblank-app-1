@@ -1,3 +1,7 @@
+"""
+Enhanced content_gen.py module with improved prompts based on successful thyroid practitioner messaging
+"""
+
 from config import OPENAI_API_KEY, DEFAULT_TONE, TARGET_AUDIENCE, INSTAGRAM_USERNAME
 import random
 import openai
@@ -5,20 +9,122 @@ import openai
 # Configure OpenAI
 openai.api_key = OPENAI_API_KEY
 
+# Key messaging themes derived from successful thyroid practitioners
+MESSAGING_THEMES = [
+    "Normal labs don't always mean normal health - your body might be adapting, not broken",
+    "The body's systems are interconnected - thyroid health requires a whole-body approach",
+    "Root causes often include gut health, stress, inflammation, and environmental factors",
+    "When traditional approaches fail, it's time to look deeper than just thyroid medication",
+    "True healing begins with understanding your body's signals, not just managing symptoms",
+    "Your thyroid is part of a complex ecosystem - fixing just one part rarely solves everything"
+]
+
+# Content frameworks that resonate with thyroid patients
+CONTENT_FRAMEWORKS = {
+    "educational": [
+        "The hidden connection between {topic} and thyroid function",
+        "Why your doctor might be missing this key factor in {topic}",
+        "Beyond TSH: Understanding how {topic} affects your energy and metabolism",
+        "The science behind {topic} and its impact on cellular thyroid function",
+        "What your labs aren't telling you about {topic} and thyroid health"
+    ],
+    "inspirational": [
+        "You're not broken, you're adapting: How understanding {topic} can transform your health",
+        "From struggling to thriving: How addressing {topic} changed everything",
+        "Beyond medication: The {topic} approach that's helping women reclaim their energy",
+        "Your body is trying to protect you: The truth about {topic} and thyroid adaptation",
+        "The turning point: When {topic} becomes the missing piece in your thyroid journey"
+    ],
+    "funny": [
+        "When your thyroid and {topic} are NOT on speaking terms...",
+        "That awkward moment when your doctor says you're 'fine' but {topic} says otherwise",
+        "Thyroid: 'It's not me, it's {topic}' - A complicated relationship",
+        "Trying to fix your thyroid without addressing {topic} is like... [humorous analogy]",
+        "The thyroid-{topic} comedy hour: When your body's communication breaks down"
+    ],
+    "mixed": [
+        "Truth bomb: Why {topic} might be more important than your thyroid medication",
+        "The {topic} factor: What every thyroid patient needs to know (but probably hasn't been told)",
+        "Surprising ways {topic} might be hijacking your thyroid recovery",
+        "Think it's just your thyroid? How {topic} might be the real puppetmaster",
+        "The {topic} revolution: Changing how we think about hypothyroidism"
+    ]
+}
+
+# Topics related to thyroid health, root causes, and recovery
+TOPIC_CATEGORIES = {
+    "gut_health": [
+        "leaky gut syndrome", 
+        "gut microbiome imbalance", 
+        "hidden gut infections", 
+        "intestinal permeability", 
+        "food sensitivities"
+    ],
+    "stress_factors": [
+        "HPA axis dysfunction", 
+        "chronic stress response", 
+        "adrenal fatigue", 
+        "cortisol dysregulation",
+        "stress hormone imbalance"
+    ],
+    "environmental": [
+        "environmental toxins", 
+        "heavy metal exposure", 
+        "endocrine disruptors", 
+        "chemical sensitivities",
+        "mold exposure"
+    ],
+    "nutrient_status": [
+        "iodine balance", 
+        "selenium deficiency", 
+        "zinc status", 
+        "vitamin D levels",
+        "B vitamin deficiencies"
+    ],
+    "metabolic_factors": [
+        "insulin resistance", 
+        "blood sugar dysregulation", 
+        "cellular energy production", 
+        "metabolic flexibility",
+        "mitochondrial function"
+    ],
+    "inflammation": [
+        "chronic inflammation", 
+        "autoimmune triggers", 
+        "inflammatory diet patterns", 
+        "immune system regulation",
+        "inflammatory pathway activation"
+    ]
+}
+
 def generate_topic(content_type="educational"):
-    """Generate a content topic for hypothyroid audience"""
+    """Generate a compelling content topic for hypothyroid audience"""
+    
+    # Select a random category and topic within that category
+    category = random.choice(list(TOPIC_CATEGORIES.keys()))
+    specific_topic = random.choice(TOPIC_CATEGORIES[category])
+    
+    # Select a content framework based on the content type
+    framework = random.choice(CONTENT_FRAMEWORKS[content_type])
+    
+    # Insert the specific topic into the framework
+    topic = framework.format(topic=specific_topic)
+    
     prompt = f"""
-    Generate a compelling social media topic for {TARGET_AUDIENCE}.
-    The content should be {content_type} in nature.
-    The topic should be specific to hypothyroid issues, symptoms, or solutions.
-    Format as a short, catchy title (max 10 words).
+    You are a thyroid health expert who understands that many patients struggle despite "normal" lab results.
+    
+    Create a compelling social media topic for {TARGET_AUDIENCE} based on this title idea:
+    "{topic}"
+    
+    The content should be {content_type} in nature and focus on a root-cause approach to thyroid health.
+    Format as a short, catchy title (max 10 words) that would grab attention on Instagram.
     """
 
     try:
         response = openai.ChatCompletion.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a medical content specialist focused on hypothyroid issues."},
+                {"role": "system", "content": "You are a medical content specialist focused on root-cause approaches to hypothyroid issues."},
                 {"role": "user", "content": prompt}
             ],
             max_tokens=50,
@@ -27,26 +133,33 @@ def generate_topic(content_type="educational"):
         return response.choices[0].message['content'].strip().strip('"')
     except Exception as e:
         print(f"Error generating topic: {e}")
-        return "Hypothyroid Management Tips"
+        return f"The Truth About {specific_topic.title()} and Your Thyroid Health"
 
 def generate_caption(topic, content_type="educational", hashtags=5):
     """Generate a caption for an Instagram post"""
+    
+    # Select a random messaging theme to incorporate
+    theme = random.choice(MESSAGING_THEMES)
+    
     prompt = f"""
     Write an engaging Instagram caption for a post titled "{topic}".
 
     Target audience: {TARGET_AUDIENCE}
     Tone: {DEFAULT_TONE}, with a {content_type} focus
+    
+    Incorporate this key message: "{theme}"
 
     The caption should:
-    - Be 3-4 short paragraphs
-    - Include an engaging hook
-    - Provide valuable information about hypothyroid issues
+    - Begin with a compelling hook about a common frustration or misconception
+    - Include 3-4 short paragraphs with line breaks between them
+    - Emphasize a root-cause approach rather than just medication management
+    - Validate the reader's experience of feeling unwell despite "normal" labs
     - End with a clear call-to-action
     - Include {hashtags} relevant hashtags at the end
-
-    The Instagram account is @{INSTAGRAM_USERNAME}, a doctor who helps people with hypothyroid issues.
     
-    Make sure the caption is substantial, detailed, and helpful to the audience.
+    The Instagram account is @{INSTAGRAM_USERNAME}, a doctor who helps people look beyond conventional approaches to hypothyroid issues.
+    
+    Make it substantive, specific, and helpful - avoid generic advice.
     """
 
     try:
@@ -54,10 +167,10 @@ def generate_caption(topic, content_type="educational", hashtags=5):
         response = openai.ChatCompletion.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a social media content creator specializing in health topics who writes detailed, helpful multi-paragraph captions."},
+                {"role": "system", "content": "You are a social media content creator who specializes in functional medicine approaches to thyroid health. You focus on empowering patients to look beyond labs and medication to find true healing."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=750,  # Increased token limit for longer captions
+            max_tokens=750,
             temperature=0.7
         )
         
@@ -77,107 +190,91 @@ def generate_caption(topic, content_type="educational", hashtags=5):
 def generate_fallback_caption(topic, content_type="educational", hashtags=5):
     """Generate a fallback caption if the API call fails"""
     if content_type == "educational":
-        return f"""Are you struggling with your thyroid health?
+        return f"""Ever feel like your body is speaking a language your doctor doesn't understand?
 
-Many people don't realize that their fatigue, weight gain, and brain fog could be related to an underactive thyroid.
+When your labs say "normal" but you feel anything but, it's not in your head. {topic} - this connection is something conventional medicine often misses.
 
-{topic} - this is something I see in my practice every day. Understanding these signs can help you take control of your health journey.
+Your body isn't broken - it's adapting to underlying stressors that standard testing doesn't capture. Understanding this difference is the first step toward true healing.
 
-Book a consultation with Dr. Josh to discover personalized solutions for your thyroid concerns.
+Book a consultation with Dr. Josh to discover what might be driving your thyroid symptoms beneath the surface.
 
-#thyroidhealth #hypothyroid #naturalhealing #holistichealth #wellnesswisdom"""
+#thyroidhealth #hypothyroid #rootcause #functionalmedicine #beyondthelabs"""
     
     elif content_type == "inspirational":
-        return f"""Your health journey doesn't have to be a struggle!
+        return f"""You're not broken, your body is trying to tell you something.
 
-I've seen countless patients transform their lives once they understood how to properly support their thyroid function.
+After seeing countless patients with "perfect" lab results but persistent symptoms, I've learned this truth: {topic} - this is often where real healing begins.
 
-{topic} - this can be your story too. Small daily changes can lead to remarkable improvements in how you feel.
+The conventional approach treats lab numbers, not people. But your experience matters more than what a reference range says is "normal."
 
-Share your thyroid journey in the comments below. What's been your biggest challenge?
+Share your thyroid journey in the comments. What symptoms have persisted despite being told everything looks fine?
 
-#thyroidwarrior #healingjourney #hypothyroid #wellnessjourney #holistichealth"""
+#thyroidhealing #beyondthelabs #rootcause #hypothyroidjourney #holistichealth"""
     
     elif content_type == "funny":
-        return f"""When your thyroid decides to take a vacation without telling the rest of your body... 🥱
+        return f"""When your doctor says "your labs are normal" but your body says "LOL, NOPE!" 🥱
 
-{topic} - Anyone else feeling personally attacked by their own hormones?
+{topic} - Anyone else feel like their thyroid and their doctor are having two completely different conversations?
 
-The struggle is real, but so are the solutions! Dr. Josh here to help you whip that lazy thyroid back into shape.
+If your energy levels are sending an SOS but your TSH looks "fine," you're not alone. It's like your body is speaking Italian and your labs are only fluent in French.
 
-Double tap if you've ever blamed "being tired" when it was actually your thyroid all along!
+Double tap if you've mastered the art of looking functional while feeling like a phone battery at 2%!
 
-#thyroidhumor #doctorjokes #hypothyroidproblems #hormonehumor #wellnesswisdom"""
+#thyroidhumor #normallabs #stillexhausted #hypothyroidproblems #doctorjokes"""
     
     else:
-        return f"""Your body whispers before it screams. Are you listening?
+        return f"""The gap between "normal" labs and feeling normal is where most thyroid patients live.
 
-{topic} - The subtle signals your thyroid sends when it needs support aren't always obvious, but they're important messengers.
+{topic} - If you've tried everything but still struggle with fatigue, brain fog, weight, or mood issues, this might be the missing piece.
 
-I'm passionate about helping women decode these messages and find natural, effective solutions that work WITH their bodies.
+I'm passionate about looking beyond numbers on a page to find what your body is actually trying to tell you. Sometimes the most important clues are in the symptoms, not the tests.
 
-What thyroid symptoms have you been experiencing? Let's chat in the comments.
+What thyroid symptom impacts your life most despite "normal" labs? Let's chat in the comments.
 
-#thyroidhealth #womenshealth #hypothyroid #holistichealing #wellnessjourney"""
+#thyroidhealth #functionalmedicine #rootcause #beyondthelabs #thyroidrecovery"""
 
 def generate_image_prompt(topic):
     """Generate a clean, medically themed image prompt for DALL-E 3 with refined visual formatting."""
 
     visual_styles = [
-        "flat lay on a white background",
-        "isometric hospital desk view",
-        "top-down sterile lighting view",
-        "side-angle with soft shadows",
-        "3D clinical render with blue accents",
-        "minimalist medical scene with clean design",
-        "medical tray setup in natural lighting"
+        "clean medical aesthetic with light teal accents",
+        "minimalist wellness scene with soft lighting",
+        "functional medicine style with clean lines and blue tones",
+        "professional healthcare setting with subtle thyroid imagery",
+        "holistic health visual with calming natural elements",
+        "modern clinical aesthetic with soothing color palette"
     ]
 
-    prompt_groups = {
-        "general_health": [
-            "Minimalist medical icon like a blue stethoscope or health cross on a pure white background",
-            "Sterile medical tools like gloves and a digital thermometer placed neatly on a white surface"
+    prompt_categories = {
+        "conceptual": [
+            "Visual metaphor of interconnected body systems with thyroid gland highlighted",
+            "Abstract representation of balance between body systems with subtle thyroid imagery",
+            "Minimalist illustration of cellular health and metabolism",
+            "Visual concept of looking beneath the surface - medical illustration style",
+            "Clean diagram showing relationship between thyroid, gut, and brain health"
         ],
-        "lab": [
-            "Unlabeled test tubes, pipettes, and gloves on a sterile white lab tray",
-            "Clean lab setup with unmarked vials and a blank surface"
+        "lifestyle": [
+            "Wellness scene with healthy food, supplements, and medical chart in background",
+            "Peaceful morning routine setting with journal, tea, and subtle medical elements",
+            "Clean desk with stethoscope, nutrition book, and healthy meal",
+            "Organized wellness space with medical testing devices and natural elements",
+            "Balanced lifestyle scene with food, activity tracker, and relaxation elements"
         ],
-        "thyroid": [
-            "A clean desk setup with a wellness smart band, herbal tea, and a digital thermometer placed neatly on a white surface",
-            "Thyroid-friendly foods like spinach, boiled eggs, and seaweed arranged on a sterile white plate",
-            "A digital wellness tracker placed next to an unmarked pill organizer and glass water bottle on a clinical white background",
-            "Flat lay of a medical table with a temperature sensor, smartwatch, and blank daily tracker pad (face down)"
-        ],
-        "hormone_balance": [
-            "A modern clinical desk with a closed hormone-monitoring app tablet, digital watch, and blue stress ball",
-            "A medical wristband, glass of water, and clean schedule tracker turned over on a white tray",
-            "Flat lay of hormone-friendly supplements (in generic containers) next to iodine-rich greens on a sterile plate",
-            "Medical workspace with a closed digital notepad and calming blue pulse oximeter"
-        ],
-        "mental_focus_medical": [
-            "Minimalist mental health workspace with noise-canceling headphones, blank notepad (face down), and a sealed tea sachet",
-            "A closed mindfulness tracker app device next to a plant and smart ring on a white hospital tray",
-            "Clinical focus tools like blue stress ball, timer, and a muted smartwatch placed symmetrically",
-            "Simple blue circle design on clean sterile background, paired with wellness accessories"
+        "professional": [
+            "Doctor reviewing labs with thoughtful expression, clean medical office",
+            "Healthcare professional explaining diagram of thyroid and connected systems",
+            "Medical practitioner with patient in consultation, clean modern office",
+            "Doctor examining thyroid model, professional clinic setting",
+            "Healthcare provider reviewing holistic approach chart, modern office"
         ]
     }
-
-    keyword_map = {
-        "general_health": ["health", "clinic", "medical"],
-        "lab": ["lab", "test", "blood", "sample", "diagnostic"],
-        "thyroid": ["thyroid", "hormone", "levothyroxine", "gland"],
-        "hormone_balance": ["balance", "hormonal", "estrogen", "testosterone"],
-        "mental_focus_medical": ["mental", "focus", "clarity", "neuro"]
-    }
-
-    topic_lower = topic.lower()
-
-    for key, keywords in keyword_map.items():
-        if any(word in topic_lower for word in keywords):
-            base_prompt = random.choice(prompt_groups[key])
-            style = random.choice(visual_styles)
-            return f"Highly detailed top-down photo: {base_prompt}, placed on a white medical tray, styled as {style}, no text, no labels, no human body parts."
-
-    base_prompt = random.choice(prompt_groups["general_health"])
+    
+    # Choose random elements to create a unique prompt
+    category = random.choice(list(prompt_categories.keys()))
+    base_prompt = random.choice(prompt_categories[category])
     style = random.choice(visual_styles)
-    return f"Highly detailed top-down photo: {base_prompt}, placed on a white medical tray, styled as {style}, no text, no labels, no human body parts."
+    
+    # Create the final prompt with detailed restrictions
+    final_prompt = f"Professional medical illustration: {base_prompt}, {style}, high-quality medical-grade imagery, soft lighting, clean medical aesthetic, no text overlays, no human faces, suitable for Instagram medical content about thyroid health."
+    
+    return final_prompt
