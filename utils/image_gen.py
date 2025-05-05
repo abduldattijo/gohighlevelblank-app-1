@@ -8,30 +8,23 @@ from PIL import Image
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 def generate_image(prompt):
-    """Generate an image using GPT-4o's DALL·E 3 tools"""
+    """Generate an image using DALL-E 3"""
     try:
-        response = client.chat.completions.create(
+        # Use the correct images.generate method for DALL-E 3
+        response = client.images.generate(
             model="dall-e-3",
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"Create an image: {prompt}"
-                }
-            ],
-            tools=[
-                {
-                    "type": "image_generation",
-                    "parameters": {
-                        "size": "1024x1024",
-                        "n": 1
-                    }
-                }
-            ]
+            prompt=prompt,
+            size="1024x1024",
+            quality="standard",
+            n=1
         )
-
-        return response.choices[0].message.tool_calls[0].output.data[0].url
+        
+        # Extract the image URL from the response
+        image_url = response.data[0].url
+        return image_url
     except Exception as e:
-        print(f"Image generation error: {e}")
+        print(f"Error generating image: {e}")
+        # Fallback to placeholder if API call fails
         safe_prompt = prompt.replace(" ", "+")[:50]
         return f"https://via.placeholder.com/1024x1024.png?text={safe_prompt}"
 

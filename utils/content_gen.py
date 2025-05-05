@@ -1,13 +1,12 @@
-# content_gen.py (updated image prompt formatting for DALL·E)
-
 from config import OPENAI_API_KEY, DEFAULT_TONE, TARGET_AUDIENCE, INSTAGRAM_USERNAME
 import random
 import openai
 
-# Configure OpenAI for older completions if needed
+# Configure OpenAI
 openai.api_key = OPENAI_API_KEY
 
 def generate_topic(content_type="educational"):
+    """Generate a content topic for hypothyroid audience"""
     prompt = f"""
     Generate a compelling social media topic for {TARGET_AUDIENCE}.
     The content should be {content_type} in nature.
@@ -31,6 +30,7 @@ def generate_topic(content_type="educational"):
         return "Hypothyroid Management Tips"
 
 def generate_caption(topic, content_type="educational", hashtags=5):
+    """Generate a caption for an Instagram post"""
     prompt = f"""
     Write an engaging Instagram caption for a post titled "{topic}".
 
@@ -45,22 +45,80 @@ def generate_caption(topic, content_type="educational", hashtags=5):
     - Include {hashtags} relevant hashtags at the end
 
     The Instagram account is @{INSTAGRAM_USERNAME}, a doctor who helps people with hypothyroid issues.
+    
+    Make sure the caption is substantial, detailed, and helpful to the audience.
     """
 
     try:
+        print(f"Sending caption prompt to GPT-4o...")
         response = openai.ChatCompletion.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a social media content creator specializing in health topics."},
+                {"role": "system", "content": "You are a social media content creator specializing in health topics who writes detailed, helpful multi-paragraph captions."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=500,
+            max_tokens=750,  # Increased token limit for longer captions
             temperature=0.7
         )
-        return response.choices[0].message['content'].strip()
+        
+        caption = response.choices[0].message['content'].strip()
+        print(f"Caption generated successfully, length: {len(caption)} characters")
+        
+        # Ensure we actually got a substantial caption
+        if len(caption) < 100:
+            print("Caption too short, using fallback")
+            return generate_fallback_caption(topic, content_type, hashtags)
+            
+        return caption
     except Exception as e:
         print(f"Error generating caption: {e}")
-        return f"This is a post about {topic}. #hypothyroid #health"
+        return generate_fallback_caption(topic, content_type, hashtags)
+
+def generate_fallback_caption(topic, content_type="educational", hashtags=5):
+    """Generate a fallback caption if the API call fails"""
+    if content_type == "educational":
+        return f"""Are you struggling with your thyroid health?
+
+Many people don't realize that their fatigue, weight gain, and brain fog could be related to an underactive thyroid.
+
+{topic} - this is something I see in my practice every day. Understanding these signs can help you take control of your health journey.
+
+Book a consultation with Dr. Josh to discover personalized solutions for your thyroid concerns.
+
+#thyroidhealth #hypothyroid #naturalhealing #holistichealth #wellnesswisdom"""
+    
+    elif content_type == "inspirational":
+        return f"""Your health journey doesn't have to be a struggle!
+
+I've seen countless patients transform their lives once they understood how to properly support their thyroid function.
+
+{topic} - this can be your story too. Small daily changes can lead to remarkable improvements in how you feel.
+
+Share your thyroid journey in the comments below. What's been your biggest challenge?
+
+#thyroidwarrior #healingjourney #hypothyroid #wellnessjourney #holistichealth"""
+    
+    elif content_type == "funny":
+        return f"""When your thyroid decides to take a vacation without telling the rest of your body... 🥱
+
+{topic} - Anyone else feeling personally attacked by their own hormones?
+
+The struggle is real, but so are the solutions! Dr. Josh here to help you whip that lazy thyroid back into shape.
+
+Double tap if you've ever blamed "being tired" when it was actually your thyroid all along!
+
+#thyroidhumor #doctorjokes #hypothyroidproblems #hormonehumor #wellnesswisdom"""
+    
+    else:
+        return f"""Your body whispers before it screams. Are you listening?
+
+{topic} - The subtle signals your thyroid sends when it needs support aren't always obvious, but they're important messengers.
+
+I'm passionate about helping women decode these messages and find natural, effective solutions that work WITH their bodies.
+
+What thyroid symptoms have you been experiencing? Let's chat in the comments.
+
+#thyroidhealth #womenshealth #hypothyroid #holistichealing #wellnessjourney"""
 
 def generate_image_prompt(topic):
     """Generate a clean, medically themed image prompt for DALL-E 3 with refined visual formatting."""
