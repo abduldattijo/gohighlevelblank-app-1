@@ -1,13 +1,13 @@
 """
-Enhanced content_gen.py module with improved prompts based on successful thyroid practitioner messaging
+Updated content_gen.py module with OpenAI 1.0+ compatibility
 """
 
 from config import OPENAI_API_KEY, DEFAULT_TONE, TARGET_AUDIENCE, INSTAGRAM_USERNAME
 import random
-import openai
+from openai import OpenAI
 
-# Configure OpenAI
-openai.api_key = OPENAI_API_KEY
+# Initialize the OpenAI client
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Key messaging themes derived from successful thyroid practitioners
 MESSAGING_THEMES = [
@@ -39,7 +39,7 @@ CONTENT_FRAMEWORKS = {
         "When your thyroid and {topic} are NOT on speaking terms...",
         "That awkward moment when your doctor says you're 'fine' but {topic} says otherwise",
         "Thyroid: 'It's not me, it's {topic}' - A complicated relationship",
-        "Trying to fix your thyroid without addressing {topic} is like... [humorous analogy]",
+        "Trying to fix your thyroid without addressing {topic} is like...",
         "The thyroid-{topic} comedy hour: When your body's communication breaks down"
     ],
     "mixed": [
@@ -105,7 +105,7 @@ def generate_topic(content_type="educational"):
     specific_topic = random.choice(TOPIC_CATEGORIES[category])
     
     # Select a content framework based on the content type
-    framework = random.choice(CONTENT_FRAMEWORKS[content_type])
+    framework = random.choice(CONTENT_FRAMEWORKS[content_type.lower()])
     
     # Insert the specific topic into the framework
     topic = framework.format(topic=specific_topic)
@@ -121,7 +121,7 @@ def generate_topic(content_type="educational"):
     """
 
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are a medical content specialist focused on root-cause approaches to hypothyroid issues."},
@@ -130,7 +130,7 @@ def generate_topic(content_type="educational"):
             max_tokens=50,
             temperature=0.7
         )
-        return response.choices[0].message['content'].strip().strip('"')
+        return response.choices[0].message.content.strip().strip('"')
     except Exception as e:
         print(f"Error generating topic: {e}")
         return f"The Truth About {specific_topic.title()} and Your Thyroid Health"
@@ -164,7 +164,7 @@ def generate_caption(topic, content_type="educational", hashtags=5):
 
     try:
         print(f"Sending caption prompt to GPT-4o...")
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are a social media content creator who specializes in functional medicine approaches to thyroid health. You focus on empowering patients to look beyond labs and medication to find true healing."},
@@ -174,7 +174,7 @@ def generate_caption(topic, content_type="educational", hashtags=5):
             temperature=0.7
         )
         
-        caption = response.choices[0].message['content'].strip()
+        caption = response.choices[0].message.content.strip()
         print(f"Caption generated successfully, length: {len(caption)} characters")
         
         # Ensure we actually got a substantial caption
@@ -189,18 +189,18 @@ def generate_caption(topic, content_type="educational", hashtags=5):
 
 def generate_fallback_caption(topic, content_type="educational", hashtags=5):
     """Generate a fallback caption if the API call fails"""
-    if content_type == "educational":
+    if content_type.lower() == "educational":
         return f"""Ever feel like your body is speaking a language your doctor doesn't understand?
 
 When your labs say "normal" but you feel anything but, it's not in your head. {topic} - this connection is something conventional medicine often misses.
 
 Your body isn't broken - it's adapting to underlying stressors that standard testing doesn't capture. Understanding this difference is the first step toward true healing.
 
-Book a consultation with Dr. Josh to discover what might be driving your thyroid symptoms beneath the surface.
+Book a consultation to discover what might be driving your thyroid symptoms beneath the surface.
 
 #thyroidhealth #hypothyroid #rootcause #functionalmedicine #beyondthelabs"""
     
-    elif content_type == "inspirational":
+    elif content_type.lower() == "inspirational":
         return f"""You're not broken, your body is trying to tell you something.
 
 After seeing countless patients with "perfect" lab results but persistent symptoms, I've learned this truth: {topic} - this is often where real healing begins.
@@ -211,7 +211,7 @@ Share your thyroid journey in the comments. What symptoms have persisted despite
 
 #thyroidhealing #beyondthelabs #rootcause #hypothyroidjourney #holistichealth"""
     
-    elif content_type == "funny":
+    elif content_type.lower() == "funny":
         return f"""When your doctor says "your labs are normal" but your body says "LOL, NOPE!" 🥱
 
 {topic} - Anyone else feel like their thyroid and their doctor are having two completely different conversations?
@@ -247,25 +247,19 @@ def generate_image_prompt(topic):
 
     prompt_categories = {
         "conceptual": [
-            "Visual metaphor of interconnected body systems with thyroid gland highlighted",
-            "Abstract representation of balance between body systems with subtle thyroid imagery",
-            "Minimalist illustration of cellular health and metabolism",
-            "Visual concept of looking beneath the surface - medical illustration style",
-            "Clean diagram showing relationship between thyroid, gut, and brain health"
+            "Professional photograph of doctor examining patient's thyroid area in naturally lit medical office",
+            "Healthcare provider and patient reviewing thyroid lab results together in realistic consultation room",
+            "Documentary-style medical photo of thyroid examination with proper hand placement on neck"
         ],
         "lifestyle": [
-            "Wellness scene with healthy food, supplements, and medical chart in background",
-            "Peaceful morning routine setting with journal, tea, and subtle medical elements",
-            "Clean desk with stethoscope, nutrition book, and healthy meal",
-            "Organized wellness space with medical testing devices and natural elements",
-            "Balanced lifestyle scene with food, activity tracker, and relaxation elements"
+            "Natural lifestyle photo of person preparing thyroid-supporting meal with selenium-rich foods",
+            "Authentic photograph of individual doing gentle yoga for thyroid health in morning sunlight",
+            "Realistic healthcare photography of person taking thyroid medication with glass of water"
         ],
-        "professional": [
-            "Doctor reviewing labs with thoughtful expression, clean medical office",
-            "Healthcare professional explaining diagram of thyroid and connected systems",
-            "Medical practitioner with patient in consultation, clean modern office",
-            "Doctor examining thyroid model, professional clinic setting",
-            "Healthcare provider reviewing holistic approach chart, modern office"
+        "medical": [
+            "Professional medical photographer's perspective of thyroid ultrasound procedure in hospital setting",
+            "Realistic clinical photograph of doctor using thyroid model to explain condition to patient",
+            "Documentary-style healthcare photo of blood test being taken for thyroid panel"
         ]
     }
     
@@ -274,7 +268,23 @@ def generate_image_prompt(topic):
     base_prompt = random.choice(prompt_categories[category])
     style = random.choice(visual_styles)
     
-    # Create the final prompt with detailed restrictions
-    final_prompt = f"Professional medical illustration: {base_prompt}, {style}, high-quality medical-grade imagery, soft lighting, clean medical aesthetic, no text overlays, no human faces, suitable for Instagram medical content about thyroid health."
+    # Create the final prompt with detailed restrictions for realistic imagery
+    final_prompt = f"""
+    Create a photorealistic medical image: {base_prompt}
+
+    Topic connection: {topic}
+
+    Style specifications:
+    - {style}
+    - Realistic medical photography style with authentic details
+    - Natural lighting that creates proper shadows and dimension
+    - Realistic human expressions and skin textures
+    - Proper medical accuracy in any procedures shown
+    - Professional composition like editorial healthcare photography
+
+    The image must look like it was taken by a professional medical photographer, 
+    not generated by AI. It should have realistic imperfections and natural details
+    that make it appear authentic and professional.
+    """
     
-    return final_prompt
+    return final_prompt.strip()

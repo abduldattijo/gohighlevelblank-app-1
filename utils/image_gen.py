@@ -1,5 +1,5 @@
 """
-Compatible image_gen.py module with required functions
+Updated image_gen.py module with OpenAI 1.0+ compatibility
 """
 
 from openai import OpenAI
@@ -74,7 +74,7 @@ def generate_realistic_prompt(topic, content_type="educational"):
     return prompt.strip()
 
 def generate_image(prompt, content_type="educational"):
-    """Generate an image using DALL-E 3"""
+    """Generate an image using DALL-E 3 with updated OpenAI 1.0+ API"""
     try:
         # Create a realistic medical prompt if not provided
         if len(prompt) < 50:
