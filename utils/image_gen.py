@@ -1,5 +1,5 @@
 """
-Fixed image_gen.py module with reliable DALL-E 3 implementation
+Updated image_gen.py module with GPT Image 1 implementation
 """
 
 from openai import OpenAI
@@ -9,19 +9,20 @@ from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont, ImageColor
 import random
 import os
+import base64
 
 # Initialize the OpenAI client
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Define brand styling constants 
 # (These should match your config.py values - adjust as needed)
-COLOR_PRIMARY = "#4267B2" if 'BRAND_COLORS' not in globals() else BRAND_COLORS[0]
-COLOR_SECONDARY = "#00b2ff" if 'BRAND_COLORS' not in globals() else BRAND_COLORS[1]
-COLOR_BACKGROUND = "#FFFFFF" if 'BRAND_COLORS' not in globals() else BRAND_COLORS[2]
+COLOR_PRIMARY = "#4267B2" if 'BRAND_COLORS' not in globals() else BRAND_COLORS[2]
+COLOR_SECONDARY = "#00b2ff" if 'BRAND_COLORS' not in globals() else BRAND_COLORS[3]
+COLOR_BACKGROUND = "#FFFFFF" if 'BRAND_COLORS' not in globals() else BRAND_COLORS[0]
 COLOR_TEXT = "#333333"
 
 def generate_realistic_prompt(topic, content_type="educational"):
-    """Generate a realistic, professional medical image prompt for DALL-E 3"""
+    """Generate a realistic, professional medical image prompt for GPT Image 1"""
     
     # Define realistic medical scenarios based on content type
     scenarios = {
@@ -70,30 +71,144 @@ def generate_realistic_prompt(topic, content_type="educational"):
     
     return prompt.strip()
 
-def generate_image(prompt, content_type="educational"):
-    """Generate an image using DALL-E 3"""
+def generate_image(prompt, content_type="educational", quality="medium", size="1024x1024"):
+    """Generate an image using GPT Image 1"""
     try:
         # Create a realistic medical prompt if not provided
         if len(prompt) < 50:
             prompt = generate_realistic_prompt(prompt, content_type)
             
-        print(f"Generating image with DALL-E 3: {prompt[:100]}...")
+        print(f"Generating image with GPT Image 1: {prompt[:100]}...")
         
-        # Call DALL-E 3
+        # Call GPT Image 1
         response = client.images.generate(
-            model="dall-e-3",
+            model="gpt-image-1",
             prompt=prompt,
-            size="1024x1024",
-            quality="hd",  # Use highest quality for realism
-            style="natural",  # Emphasize natural, realistic style
+            size=size,
+            quality=quality,
             n=1
         )
         
-        # Extract the image URL from the response
-        image_url = response.data[0].url
-        return image_url
+        # Extract the image URL or base64 data from the response
+        # GPT Image 1 returns b64_json by default
+        image_base64 = response.data[0].b64_json
+        
+        # Save to a temp file and return the file path
+        temp_path = f"temp_image_{random.randint(1000, 9999)}.png"
+        image_bytes = base64.b64decode(image_base64)
+        with open(temp_path, "wb") as f:
+            f.write(image_bytes)
+        
+        # Convert to base64 data URL for Streamlit
+        encoded = base64.b64encode(image_bytes).decode()
+        return f"data:image/png;base64,{encoded}"
+        
     except Exception as e:
         print(f"Error generating image: {e}")
+        # Fallback to placeholder if API call fails
+        safe_prompt = prompt.replace(" ", "+")[:50]
+        return f"https://via.placeholder.com/1024x1024.png?text={safe_prompt}"
+
+def edit_image_with_mask(image_path, mask_path, prompt, quality="medium"):
+    """Edit an image using a mask with GPT Image 1"""
+    try:
+        print(f"Editing image with mask using GPT Image 1: {prompt[:100]}...")
+        
+        response = client.images.edit(
+            model="gpt-image-1",
+            image=open(image_path, "rb"),
+            mask=open(mask_path, "rb"),
+            prompt=prompt,
+            quality=quality
+        )
+        
+        # Extract the image URL or base64 data from the response
+        image_base64 = response.data[0].b64_json
+        
+        # Save to a temp file and return the file path
+        temp_path = f"edited_image_{random.randint(1000, 9999)}.png"
+        image_bytes = base64.b64decode(image_base64)
+        with open(temp_path, "wb") as f:
+            f.write(image_bytes)
+        
+        # Convert to base64 data URL for Streamlit
+        encoded = base64.b64encode(image_bytes).decode()
+        return f"data:image/png;base64,{encoded}"
+        
+    except Exception as e:
+        print(f"Error editing image: {e}")
+        return image_path  # Return original image as fallback
+
+def generate_image_with_references(reference_image_paths, prompt, quality="medium"):
+    """Generate a new image using reference images with GPT Image 1"""
+    try:
+        print(f"Generating image with references using GPT Image 1: {prompt[:100]}...")
+        
+        # Open reference images
+        reference_images = [open(path, "rb") for path in reference_image_paths]
+        
+        response = client.images.edit(
+            model="gpt-image-1",
+            image=reference_images,
+            prompt=prompt,
+            quality=quality
+        )
+        
+        # Extract the image URL or base64 data from the response
+        image_base64 = response.data[0].b64_json
+        
+        # Save to a temp file and return the file path
+        temp_path = f"referenced_image_{random.randint(1000, 9999)}.png"
+        image_bytes = base64.b64decode(image_base64)
+        with open(temp_path, "wb") as f:
+            f.write(image_bytes)
+        
+        # Close all reference image file handles
+        for img in reference_images:
+            img.close()
+        
+        # Convert to base64 data URL for Streamlit
+        encoded = base64.b64encode(image_bytes).decode()
+        return f"data:image/png;base64,{encoded}"
+        
+    except Exception as e:
+        print(f"Error generating image with references: {e}")
+        return f"https://via.placeholder.com/1024x1024.png?text=Reference+Image+Error"
+
+def generate_transparent_image(prompt, content_type="educational", quality="high", size="1024x1024"):
+    """Generate an image with transparent background using GPT Image 1"""
+    try:
+        # Create a realistic medical prompt if not provided
+        if len(prompt) < 50:
+            prompt = generate_realistic_prompt(prompt, content_type)
+            
+        print(f"Generating transparent image with GPT Image 1: {prompt[:100]}...")
+        
+        # Call GPT Image 1 with transparent background
+        response = client.images.generate(
+            model="gpt-image-1",
+            prompt=prompt,
+            size=size,
+            quality=quality,
+            background="transparent",
+            n=1
+        )
+        
+        # Extract the image URL or base64 data from the response
+        image_base64 = response.data[0].b64_json
+        
+        # Save to a temp file and return the file path
+        temp_path = f"transparent_image_{random.randint(1000, 9999)}.png"
+        image_bytes = base64.b64decode(image_base64)
+        with open(temp_path, "wb") as f:
+            f.write(image_bytes)
+        
+        # Convert to base64 data URL for Streamlit
+        encoded = base64.b64encode(image_bytes).decode()
+        return f"data:image/png;base64,{encoded}"
+        
+    except Exception as e:
+        print(f"Error generating transparent image: {e}")
         # Fallback to placeholder if API call fails
         safe_prompt = prompt.replace(" ", "+")[:50]
         return f"https://via.placeholder.com/1024x1024.png?text={safe_prompt}"

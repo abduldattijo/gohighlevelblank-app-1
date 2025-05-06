@@ -1,5 +1,5 @@
 """
-Enhanced streamlit_app.py with fixed column nesting issue
+Enhanced streamlit_app.py with GPT Image 1 integration
 """
 
 import streamlit as st
@@ -18,7 +18,13 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 # Now import from utils
 from utils.ghl_api import get_social_accounts, create_social_post, get_posts
 from utils.content_gen import generate_topic, generate_caption, generate_image_prompt
-from utils.image_gen import generate_image, save_image_from_url, create_graphic_with_text
+from utils.image_gen import (
+    generate_image, 
+    generate_transparent_image,
+    edit_image_with_mask,
+    generate_image_with_references,
+    create_graphic_with_text
+)
 
 # Page configuration with improved styling
 st.set_page_config(
@@ -90,7 +96,7 @@ if 'image_prompt' not in st.session_state:
     st.session_state.image_prompt = ""
 
 # Function to generate image
-def generate_image_content(topic, prompt, content_type, use_text_graphic):
+def generate_image_content(topic, prompt, content_type, use_text_graphic, quality, transparent_bg):
     with st.spinner("Creating image..."):
         try:
             if use_text_graphic:
@@ -108,7 +114,20 @@ def generate_image_content(topic, prompt, content_type, use_text_graphic):
                         return f"data:image/png;base64,{encoded}"
             else:
                 # Generate image using the edited prompt
-                image_url = generate_image(prompt, content_type.lower())
+                if transparent_bg:
+                    # Use transparent background option
+                    image_url = generate_transparent_image(
+                        prompt, 
+                        content_type.lower(),
+                        quality=quality
+                    )
+                else:
+                    # Use standard image generation
+                    image_url = generate_image(
+                        prompt, 
+                        content_type.lower(),
+                        quality=quality
+                    )
                 return image_url
         except Exception as e:
             st.error(f"Error generating image: {e}")
@@ -172,6 +191,22 @@ with st.sidebar:
     auto_generate_image = st.checkbox("Auto-generate image with content", value=True,
                                     help="Automatically generate image when creating new content")
     
+    # New Image Model Options
+    st.divider()
+    st.subheader("Image Generation Settings")
+    
+    # Image quality selection
+    image_quality = st.selectbox(
+        "Image Quality",
+        ["low", "medium", "high"],
+        index=1,  # Default to medium
+        help="Higher quality produces better images but takes longer to generate"
+    )
+    
+    # Transparent background option
+    transparent_background = st.checkbox("Use transparent background", value=False,
+                                      help="Create images with transparent backgrounds (requires PNG format)")
+    
     st.divider()
     
     # Publishing section
@@ -189,7 +224,7 @@ with st.sidebar:
         )
 
 # Main content area with tabs
-tab1, tab2, tab3 = st.tabs(["Create Content", "Post History", "Settings"])
+tab1, tab2, tab3, tab4 = st.tabs(["Create Content", "Post History", "Advanced Image Tools", "Settings"])
 
 with tab1:
     col1, col2 = st.columns([1, 1])
@@ -219,7 +254,9 @@ with tab1:
                         topic, 
                         image_prompt, 
                         content_type, 
-                        use_text_graphic
+                        use_text_graphic,
+                        image_quality,
+                        transparent_background
                     )
                     if image_url:
                         st.session_state.current_image_url = image_url
@@ -281,7 +318,9 @@ with tab1:
                         st.session_state.current_topic,
                         st.session_state.image_prompt,
                         content_type,
-                        use_text_graphic
+                        use_text_graphic,
+                        image_quality,
+                        transparent_background
                     )
                     
                     if image_url:
@@ -309,7 +348,9 @@ with tab1:
                         st.session_state.current_topic,
                         st.session_state.image_prompt,
                         content_type,
-                        use_text_graphic
+                        use_text_graphic,
+                        image_quality,
+                        transparent_background
                     )
                     
                     if image_url:
@@ -481,6 +522,150 @@ with tab2:
         st.info("No content created yet. Start creating content in the 'Create Content' tab.")
 
 with tab3:
+    st.subheader("Advanced Image Tools")
+    
+    # Add sections for the new GPT Image 1 capabilities
+    st.markdown("### Multi-Image Composition")
+    st.write("Create a new image that combines elements from multiple reference images.")
+    
+    # File uploaders for reference images
+    upload_col1, upload_col2 = st.columns(2)
+    
+    with upload_col1:
+        ref_image1 = st.file_uploader("Upload reference image 1", type=["png", "jpg", "jpeg"], key="ref1")
+        ref_image2 = st.file_uploader("Upload reference image 2", type=["png", "jpg", "jpeg"], key="ref2")
+    
+    with upload_col2:
+        ref_image3 = st.file_uploader("Upload reference image 3 (optional)", type=["png", "jpg", "jpeg"], key="ref3")
+        ref_image4 = st.file_uploader("Upload reference image 4 (optional)", type=["png", "jpg", "jpeg"], key="ref4")
+    
+    # Prompt for combined image
+    st.text_area(
+        "Describe how to combine the reference images:", 
+        placeholder="Example: Create a photorealistic image of a gift basket containing all items from the reference images on a white background with a ribbon",
+        key="composition_prompt",
+        height=100
+    )
+    
+    # Quality setting for combined image
+    composition_quality = st.selectbox(
+        "Composition Image Quality",
+        ["low", "medium", "high"],
+        index=1,
+        help="Higher quality settings will take longer to generate but will have better details",
+        key="composition_quality"
+    )
+    
+    # Button to generate combined image
+    if st.button("Create Composition", type="primary"):
+        # Check if we have at least one reference image and a prompt
+        if (ref_image1 is not None or ref_image2 is not None) and st.session_state.composition_prompt:
+            with st.spinner("Creating composition from reference images..."):
+                # Save uploaded images to temp files
+                reference_paths = []
+                
+                for i, img in enumerate([ref_image1, ref_image2, ref_image3, ref_image4]):
+                    if img is not None:
+                        img_path = f"temp_ref_{i}.png"
+                        with open(img_path, "wb") as f:
+                            f.write(img.getbuffer())
+                        reference_paths.append(img_path)
+                
+                # Generate image with references
+                result_image = generate_image_with_references(
+                    reference_paths,
+                    st.session_state.composition_prompt,
+                    quality=composition_quality
+                )
+                
+                # Display the result
+                if result_image:
+                    st.success("Composition created successfully!")
+                    st.image(result_image, caption="Generated Composition", use_column_width=True)
+                    
+                    # Add save option
+                    st.download_button(
+                        "Download Composition",
+                        data=open(result_image, "rb").read() if not result_image.startswith("data:") and not result_image.startswith("http") else result_image,
+                        file_name="composition.png",
+                        mime="image/png"
+                    )
+        else:
+            st.warning("Please upload at least one reference image and provide a description.")
+    
+    st.divider()
+    
+    st.markdown("### Image Editing with Mask")
+    st.write("Edit specific parts of an image by creating a mask.")
+    
+    # File uploaders for source image and mask
+    mask_col1, mask_col2 = st.columns(2)
+    
+    with mask_col1:
+        source_image = st.file_uploader("Upload source image to edit", type=["png", "jpg", "jpeg"], key="source")
+        if source_image:
+            st.image(source_image, caption="Source Image", use_column_width=True)
+    
+    with mask_col2:
+        mask_image = st.file_uploader("Upload mask image (transparent areas will be edited)", type=["png"], key="mask")
+        if mask_image:
+            st.image(mask_image, caption="Mask Image (transparent areas will be edited)", use_column_width=True)
+    
+    # Prompt for edited image
+    st.text_area(
+        "Describe what should replace the masked area:", 
+        placeholder="Example: Replace the masked area with a serene lake reflecting a mountain range",
+        key="mask_prompt",
+        height=100
+    )
+    
+    # Quality setting for edited image
+    mask_quality = st.selectbox(
+        "Edited Image Quality",
+        ["low", "medium", "high"],
+        index=1,
+        help="Higher quality settings will take longer to generate but will have better details",
+        key="mask_quality"
+    )
+    
+    # Button to generate edited image
+    if st.button("Create Edited Image", type="primary", key="edit_button"):
+        # Check if we have source, mask, and a prompt
+        if source_image is not None and mask_image is not None and st.session_state.mask_prompt:
+            with st.spinner("Creating edited image..."):
+                # Save uploaded images to temp files
+                source_path = "temp_source.png"
+                with open(source_path, "wb") as f:
+                    f.write(source_image.getbuffer())
+                
+                mask_path = "temp_mask.png"
+                with open(mask_path, "wb") as f:
+                    f.write(mask_image.getbuffer())
+                
+                # Generate edited image
+                result_image = edit_image_with_mask(
+                    source_path,
+                    mask_path,
+                    st.session_state.mask_prompt,
+                    quality=mask_quality
+                )
+                
+                # Display the result
+                if result_image:
+                    st.success("Image edited successfully!")
+                    st.image(result_image, caption="Edited Image", use_column_width=True)
+                    
+                    # Add save option
+                    st.download_button(
+                        "Download Edited Image",
+                        data=open(result_image, "rb").read() if not result_image.startswith("data:") and not result_image.startswith("http") else result_image,
+                        file_name="edited_image.png",
+                        mime="image/png"
+                    )
+        else:
+            st.warning("Please upload both a source image and a mask image, and provide an editing description.")
+
+with tab4:
     st.subheader("Settings")
     
     # Brand settings
