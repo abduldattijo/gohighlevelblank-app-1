@@ -1,5 +1,5 @@
 """
-Updated image_gen.py module using GPT-4o for image generation
+Fixed image_gen.py module with reliable DALL-E 3 implementation
 """
 
 from openai import OpenAI
@@ -21,12 +21,12 @@ COLOR_BACKGROUND = "#FFFFFF" if 'BRAND_COLORS' not in globals() else BRAND_COLOR
 COLOR_TEXT = "#333333"
 
 def generate_realistic_prompt(topic, content_type="educational"):
-    """Generate a realistic, professional medical image prompt for GPT-4o"""
+    """Generate a realistic, professional medical image prompt for DALL-E 3"""
     
     # Define realistic medical scenarios based on content type
     scenarios = {
         "educational": [
-            f"Professional doctor examining patient's thyroid with proper hand position below Adam's apple in naturally lit medical office. Topic: {topic}",
+            f"Professional photograph of doctor examining patient's thyroid with proper hand position below Adam's apple in naturally lit medical office. Topic: {topic}",
             f"Healthcare provider explaining thyroid anatomy model to attentive patient in realistic consultation room. Topic: {topic}",
             f"Medical professional showing thyroid test results to patient on computer screen in authentic clinical setting. Topic: {topic}"
         ],
@@ -55,7 +55,7 @@ def generate_realistic_prompt(topic, content_type="educational"):
     
     # Build comprehensive prompt with professional photography direction
     prompt = f"""
-    Create a photorealistic medical image showing: {scenario}
+    Create a photorealistic medical image: {scenario}
     
     Important details:
     - Use real-looking people with natural expressions and poses
@@ -71,77 +71,21 @@ def generate_realistic_prompt(topic, content_type="educational"):
     return prompt.strip()
 
 def generate_image(prompt, content_type="educational"):
-    """Generate an image using GPT-4o instead of DALL-E 3"""
+    """Generate an image using DALL-E 3"""
     try:
         # Create a realistic medical prompt if not provided
         if len(prompt) < 50:
             prompt = generate_realistic_prompt(prompt, content_type)
             
-        print(f"Generating image with GPT-4o and prompt: {prompt[:100]}...")
+        print(f"Generating image with DALL-E 3: {prompt[:100]}...")
         
-        # Call GPT-4o with image generation capabilities
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {
-                    "role": "system", 
-                    "content": "You are an expert medical photographer who specializes in creating realistic, professional healthcare imagery."
-                },
-                {
-                    "role": "user", 
-                    "content": [
-                        {
-                            "type": "text", 
-                            "text": f"Generate a high-quality, photorealistic medical image based on this description. Make it look like a real photograph, not AI-generated art: {prompt}"
-                        }
-                    ]
-                }
-            ],
-            tools=[
-                {
-                    "type": "image_generation",
-                    "image_generation": {
-                        "prompt": prompt,
-                        "model": "gpt-4o",
-                        "size": "1024x1024",
-                        "style": "natural",
-                        "quality": "hd"
-                    }
-                }
-            ],
-            tool_choice="auto",
-            temperature=0.7,
-            max_tokens=1000
-        )
-        
-        # Extract the image URL from the response
-        for tool_call in response.choices[0].message.tool_calls:
-            if tool_call.type == "image_generation":
-                # Extract image URL from the tool call
-                image_url = tool_call.image_generation.url
-                return image_url
-                
-        # If no image URL found, fallback to DALL-E 3
-        print("GPT-4o image generation not available, falling back to DALL-E 3")
-        return generate_fallback_image(prompt, content_type)
-        
-    except Exception as e:
-        print(f"Error generating image with GPT-4o: {e}")
-        # Fallback to DALL-E 3 if GPT-4o fails
-        return generate_fallback_image(prompt, content_type)
-
-def generate_fallback_image(prompt, content_type="educational"):
-    """Fallback to DALL-E 3 if GPT-4o is not available"""
-    try:
-        print(f"Generating fallback image with DALL-E 3: {prompt[:100]}...")
-        
-        # Call DALL-E 3 as fallback
+        # Call DALL-E 3
         response = client.images.generate(
             model="dall-e-3",
             prompt=prompt,
             size="1024x1024",
-            quality="standard",
-            style="natural",
+            quality="hd",  # Use highest quality for realism
+            style="natural",  # Emphasize natural, realistic style
             n=1
         )
         
@@ -149,8 +93,8 @@ def generate_fallback_image(prompt, content_type="educational"):
         image_url = response.data[0].url
         return image_url
     except Exception as e:
-        print(f"Error generating fallback image: {e}")
-        # Return placeholder if all attempts fail
+        print(f"Error generating image: {e}")
+        # Fallback to placeholder if API call fails
         safe_prompt = prompt.replace(" ", "+")[:50]
         return f"https://via.placeholder.com/1024x1024.png?text={safe_prompt}"
 
@@ -287,9 +231,13 @@ def create_graphic_with_text(topic, content_type="educational"):
         
         # Add small "dr" text in the circle
         if hasattr(draw, 'textlength'):
-            text_width = draw.textlength("dr", font=subtitle_font)
-            logo_text_x = width - logo_size//2 - padding - text_width//2
-            logo_text_y = height - logo_size//2 - padding - subtitle_font.getsize("dr")[1]//2 if hasattr(subtitle_font, 'getsize') else height - logo_size//2 - padding - 15
+            try:
+                text_width = draw.textlength("dr", font=subtitle_font)
+                logo_text_x = width - logo_size//2 - padding - text_width//2
+                logo_text_y = height - logo_size//2 - padding - subtitle_font.getsize("dr")[1]//2 if hasattr(subtitle_font, 'getsize') else height - logo_size//2 - padding - 15
+            except:
+                logo_text_x = width - logo_size//2 - padding - 15
+                logo_text_y = height - logo_size//2 - padding - 15
         else:
             logo_text_x = width - logo_size//2 - padding - 15
             logo_text_y = height - logo_size//2 - padding - 15
